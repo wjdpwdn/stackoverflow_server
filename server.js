@@ -1,4 +1,4 @@
-//  🚨 돈터치
+//  🚨 돈터치 : npm start 하면 3001 포트로 열립니다.
 const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
@@ -64,7 +64,7 @@ let members = [
   },
 ];
 
-// ⭐️ 요청
+// ⭐️ 계정요청
 
 // 회원가입
 app.post("/signup", (req, res) => {
@@ -121,6 +121,10 @@ app.post("/logout", (req, res) => {
     } else {
       // 쿠키에서 로그인 여부 제거
       res.clearCookie("isLoggedin");
+
+      // 세션 삭제
+      req.session = {};
+
       res.json({ success: true });
     }
   });
