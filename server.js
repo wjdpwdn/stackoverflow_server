@@ -2,7 +2,13 @@
 const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
+const RedisStore = require("connect-redis")(session);
+const redis = require("redis");
 
+const redisClient = redis.createClient({
+  host: "localhost",
+  port: 6379,
+});
 const app = express();
 const PORT = 3001;
 
@@ -10,13 +16,21 @@ app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
 app.use(express.json());
 app.use(
   session({
+    store: new RedisStore({ client: redisClient }),
     secret: "mySecret",
     resave: false,
     saveUninitialized: true,
     cookie: {
+      domain: "localhost",
       secure: false,
       httpOnly: true,
       maxAge: 3600000,
+
+      // 🚨 실제 배포 단계에서는 https 서버 사용과 동시에
+      // sameSite, secure 옵션이 설정되어 있어야 안전합니다.
+
+      // sameSite: 'none',
+      // secure: true,
     },
   })
 );
@@ -135,6 +149,14 @@ app.post("/logout", (req, res) => {
 // 회원조회 (관리자 전용 : "http://localhost:3001/members")
 app.get("/members", (req, res) => {
   res.json(members);
+});
+
+app.get("/questions", (req, res) => {
+  res.json(questions);
+});
+
+app.get("/answers", (req, res) => {
+  res.json(answers);
 });
 
 //  🚨 돈터치
