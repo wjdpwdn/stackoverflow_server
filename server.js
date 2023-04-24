@@ -2,21 +2,17 @@
 const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
-const RedisStore = require("connect-redis")(session);
-const redis = require("redis");
 
-const redisClient = redis.createClient({
-  host: "localhost",
-  port: 6379,
-});
 const app = express();
-const PORT = 3001;
+const PORT = 3002;
 
+// cors 허용
 app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
+// express 사용
 app.use(express.json());
+//
 app.use(
   session({
-    store: new RedisStore({ client: redisClient }),
     secret: "mySecret",
     resave: false,
     saveUninitialized: true,
@@ -66,7 +62,7 @@ let members = [
     password: "1",
     email: "1@1",
     reputation: 0,
-    about_me: "안녕하세요 하나입니다.",
+    aboutme: "안녕하세요 하나입니다.",
   },
   {
     id: 2,
@@ -74,13 +70,14 @@ let members = [
     password: "1",
     email: "2@2",
     reputation: 0,
-    about_me: "안녕하세요 두리입니다.",
+    aboutme: "안녕하세요 두리입니다.",
   },
 ];
 
-// ⭐️ 계정요청
+// 1️⃣ 계정요청
 
-// 회원가입
+// 1️⃣ − 2️⃣ 회원가입
+
 app.post("/signup", (req, res) => {
   const { email, password, membername } = req.body;
 
@@ -97,15 +94,43 @@ app.post("/signup", (req, res) => {
   } else {
     // 새로운 사용자 정보 생성
     const id = Math.floor(Math.random() * 100000); // 5자리 랜덤 숫자 생성
-    const about_me = `안녕하세요 ${membername}입니다.`; // 기본값 설정
+    const aboutme = `안녕하세요 ${membername}입니다.`; // 기본값 설정
     const reputation = 0;
-    const newMember = { email, password, membername, about_me, id, reputation };
+    const newMember = { email, password, membername, aboutme, id, reputation };
     members.push(newMember);
     res.json({ success: true, message: "회원가입이 완료되었습니다." });
   }
 });
 
-// 로그인
+// 1️⃣ − 3️⃣ 로그인
+
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  // 등록된 사용자인지 체크
+  const member = members.find(
+    (member) => member.email === email && member.password === password
+  );
+  if (member) {
+    // 로그인 정보를 세션에 저장
+    req.session.member = member;
+
+    // 쿠키에 로그인 정보를 저장
+    res.cookie("memberName", member.membername, { maxAge: 3600000 });
+    res.cookie("aboutme", member.aboutme, { maxAge: 3600000 });
+    res.cookie("isLoggedin", true, { maxAge: 3600000 });
+    res.cookie("email", member.email, { maxAge: 3600000 });
+
+    res.json({ success: true });
+  } else {
+    res.json({
+      success: false,
+      message: "이메일 또는 비밀번호가 올바르지 않습니다.",
+    });
+  }
+});
+
+/* 실패코드
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -123,9 +148,10 @@ app.post("/login", (req, res) => {
       message: "이메일 또는 비밀번호가 올바르지 않습니다.",
     });
   }
-});
+})*/
 
-// 로그아웃
+// 로그아웃 −−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
 app.post("/logout", (req, res) => {
   // 세션에서 사용자 정보 삭제
   req.session.destroy((error) => {
@@ -135,18 +161,18 @@ app.post("/logout", (req, res) => {
     } else {
       // 쿠키에서 로그인 여부 제거
       res.clearCookie("isLoggedin");
-
+      res.clearCookie("memberName");
+      res.clearCookie("aboutme");
+      res.clearCookie("email");
       // 세션 삭제
-      req.session = {};
 
       res.json({ success: true });
     }
   });
 });
 
-// ⭐️ 조회
+// 조회 −−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−-
 
-// 회원조회 (관리자 전용 : "http://localhost:3001/members")
 app.get("/members", (req, res) => {
   res.json(members);
 });
@@ -157,6 +183,30 @@ app.get("/questions", (req, res) => {
 
 app.get("/answers", (req, res) => {
   res.json(answers);
+});
+
+// 계정 삭제 −−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−
+
+app.delete("/members/:email", (req, res) => {
+  const email = req.params.email;
+
+  const index = members.findIndex((member) => member.email === email);
+
+  if (index === -1) {
+    // 해당 이메일을 가진 사용자가 존재하지 않을 때
+    res
+      .status(404)
+      .json({ message: "해당 이메일을 가진 사용자가 존재하지 않습니다." });
+    return;
+  }
+
+  // 사용자 삭제
+  members.splice(index, 1);
+
+  // 세션 삭제
+  req.session.destroy();
+
+  res.json({ message: "회원탈퇴가 완료되었습니다." });
 });
 
 //  🚨 돈터치
