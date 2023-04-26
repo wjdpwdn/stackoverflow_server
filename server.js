@@ -209,5 +209,34 @@ app.delete("/members/:email", (req, res) => {
   res.json({ message: "회원탈퇴가 완료되었습니다." });
 });
 
+// 비밀번호 수정 −−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−-
+app.put("/members", (req, res) => {
+  const { email } = req.query;
+  const { password } = req.body;
+
+  const memberIndex = members.findIndex((member) => member.email === email);
+  if (memberIndex === -1) {
+    return res.status(404).json({ message: "Member not found" });
+  }
+
+  members[memberIndex].password = password;
+  return res.status(200).json({ message: "Password updated successfully" });
+});
+
+// 자기소개 수정 −−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−-
+
+app.put("/members/:email/aboutme", (req, res) => {
+  const { email } = req.params;
+  const { newAboutMe } = req.body;
+
+  const memberIndex = members.findIndex((member) => member.email === email);
+  if (memberIndex === -1) {
+    return res.status(404).json({ message: "Member not found" });
+  }
+
+  members[memberIndex].aboutme = newAboutMe;
+  return res.status(200).json({ message: "About me updated successfully" });
+});
+
 //  🚨 돈터치
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
